@@ -1,4 +1,5 @@
 import random
+from struct import unpack
 
 def calculate_peer_id():
     """
@@ -12,3 +13,11 @@ def calculate_peer_id():
     """
     return '-PC0001-' + ''.join(
         [str(random.randint(0, 9)) for _ in range(12)])
+
+
+def decode_port(port):
+    """
+    Converts a 32-bit packed binary port number to int
+    """
+    # Convert from C style big-endian encoded as unsigned short
+    return unpack(">H", port)[0]
