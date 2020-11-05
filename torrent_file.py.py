@@ -25,8 +25,10 @@ class TorrentFile(object):
         
         try:
             # metainfo, length = bcodec.bdecode(data)
-            print(data)
             metainfo = Decoder(data).decode()
+            print(data)
+            print()
+            print(metainfo)
             self.__file_name = filename
             self.__metainfo = metainfo
             self.__bencode_data = data
@@ -111,24 +113,24 @@ class TorrentFile(object):
         if offset+20 > len(pieces):
             return None
         return pieces[offset:offset+20]
-    
+
     def get_pieces_num(self):
         return len(self.__get_meta_info('pieces'))/20
-        
+
     def get_files(self):
-        
+
         files = []
         name = self.__decode_text(self.__get_meta_info('name'))
         piece_length = self.get_piece_length()
         if name == None:
             return files
-        
+
         if self.__is_singlefile():
             file_name = name
             file_length = self.__get_meta_info('length')
             if not file_length:
                 return files
-            
+
             pieces_num = file_length/piece_length
             last_piece_offset =  file_length % piece_length
             if last_piece_offset != 0:
@@ -138,33 +140,33 @@ class TorrentFile(object):
                 last_piece_offset = piece_length - 1
 
             first_piece_offset = 0
-            
+
             files.append({'name':[file_name], 'length':file_length, 'first-piece':(0, first_piece_offset), 'last-piece':(pieces_num-1,last_piece_offset)})
             return files
-        
+
         folder = name
         meta_files = self.__get_meta_info('files')
         if meta_files == None:
             return files
-        
+
         total_length = int(0)
         for one_file in self.__get_meta_info('files'):
-            
+
             file_info = {}
             path_list = []
             path_list.append(folder)
-                        
+
             if 'path' not in one_file.keys():
                 break
             for path in one_file['path']:
                 path_list.append(self.__decode_text(path))
             file_info['name'] = path_list
-            
+
             if 'length' not in one_file.keys():
                 break
-            
+
             file_info['length'] =  one_file['length']
-            
+
             piece_index = total_length / piece_length
             first_piece_offset =  total_length % piece_length
             
