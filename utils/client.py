@@ -1,3 +1,9 @@
+import asyncio
+import time
+
+from .peer_connection import PeerConnection
+from .piece_manager import PieceManager
+from .tracker import Tracker
 
 
 class TorrentClient:
@@ -15,63 +21,96 @@ class TorrentClient:
     (or worse yet processes) we can create them all at once and they will
     be waiting until there is a peer to consume in the queue.
     """
-    # def __init__(self, torrent):
-    #     self.tracker = Tracker(torrent)
-    def __init__(self, tracker):
-        self.tracker = tracker
+    def __init__(self, torrent, MAX_PEER_CONNECTIONS=40):
+        self.tracker = Tracker(torrent)
+        # The number of max peer connections per TorrentClient
+        self.MAX_PEER_CONNECTIONS = MAX_PEER_CONNECTIONS
         # The list of potential peers is the work queue, consumed by the
         # PeerConnections
-        self.available_peers = Queue()
+        self.available_peers = asyncio.Queue()
         # The list of peers is the list of workers that *might* be connected
         # to a peer. Else they are waiting to consume new remote peers from
         # the `available_peers` queue. These are our workers!
-        self.peers = []
+        self.peer_connections = []
         # The piece manager implements the strategy on which pieces to
         # request, as well as the logic to persist received pieces to disk.
-        # self.piece_manager = PieceManager(torrent)
+        self.piece_manager = PieceManager(torrent)
         self.abort = False
 
     async def start(self):
-            """
-            Start downloading the torrent held by this client.
+        """
+        Start downloading the torrent held by this client.
 
-            This results in connecting to the tracker to retrieve the list of
-            peers to communicate with. Once the torrent is fully downloaded or
-            if the download is aborted this method will complete.
-            """
-            self.peers = [PeerConnection(self.available_peers,
-                                        self.tracker.torrent.info_hash,
-                                        self.tracker.peer_id,
-                                        self.piece_manager,
-                                        self._on_block_retrieved)
-                        for _ in range(MAX_PEER_CONNECTIONS)]
+        This results in connecting to the tracker to retrieve the list of
+        peers to communicate with. Once the torrent is fully downloaded or
+        if the download is aborted this method will complete.
+        """
+        self.peer_connections = [PeerConnection(self.available_peers,
+                                                self.tracker.torrent.info_hash,
+                                                self.tracker.peer_id,
+                                                self.piece_manager,
+                                                self._on_block_retrieved)
+                                for _ in range(self.MAX_PEER_CONNECTIONS)]
+        
+        # The time we last made an announce call (timestamp)
+        previous_moment = None
+        # Default interval between announce calls made to the tracker (in seconds)
+        interval_time = 30*60
 
-            # The time we last made an announce call (timestamp)
-            previous = None
-            # Default interval between announce calls (in seconds)
-            interval = 30*60
+        while True:
+            if self.piece_manager.complete:
+                logging.info('Torrent fully downloaded!')
+                break
+            if self.abort:
+                logging.info('Aborting download...')
+                break
 
-            while True:
-                if self.piece_manager.complete:
-                    logging.info('Torrent fully downloaded!')
-                    break
-                if self.abort:
-                    logging.info('Aborting download...')
-                    break
+            current_moment = time.time()
 
-                current = time.time()
-                if (not previous) or (previous + interval < current):
-                    response = await self.tracker.connect(
-                        first=previous if previous else False,
-                        uploaded=self.piece_manager.bytes_uploaded,
-                        downloaded=self.piece_manager.bytes_downloaded)
+            if (previous_moment is None) or (current_moment > previous_moment + interval_time):
 
-                    if response:
-                        previous = current
-                        interval = response.interval
-                        self._empty_queue()
-                        for peer in response.peers:
-                            self.available_peers.put_nowait(peer)
-                else:
-                    await asyncio.sleep(5)
-            self.stop()
+                response = await self.tracker.connect(
+                    first=False if previous_moment else True,
+                    uploaded=self.piece_manager.bytes_uploaded,
+                    downloaded=self.piece_manager.bytes_downloaded)
+
+                if response:
+                    # print(response)
+                    previous_moment = current_moment
+                    interval_time = response.interval
+                    self._update_queue(response.peers)
+                    
+            else:
+                await asyncio.sleep(5)
+
+        self.stop()
+    
+    def _update_queue(self, new_peers):
+        while not self.available_peers.empty():
+            self.available_peers.get_nowait()
+        for peer in new_peers:
+            self.available_peers.put_nowait(peer)
+
+    def _on_block_retrieved(self, peer_id, piece_index, block_offset, data):
+        """
+        Callback function called by the `PeerConnection` when a block is
+        retrieved from a peer.
+
+        :param peer_id: The id of the peer the block was retrieved from
+        :param piece_index: The piece index this block is a part of
+        :param block_offset: The block offset within its piece
+        :param data: The binary data retrieved
+        """
+        self.piece_manager.block_received(
+            peer_id=peer_id, piece_index=piece_index,
+            block_offset=block_offset, data=data)
+
+    def stop(self):
+        """
+        Stop the download or seeding process.
+        """
+        self.abort = True
+        for peer_connection in self.peer_connections:
+            peer_connection.stop()
+        self.piece_manager.close()
+        self.tracker.close()

@@ -26,9 +26,9 @@ class TorrentFile(object):
         try:
             # metainfo, length = bcodec.bdecode(data)
             metainfo = Decoder(data).decode()
-            print(data)
-            print()
-            print(metainfo)
+            # print(data)
+            # print()
+            # print(metainfo)
             self.__file_name = filename
             self.__metainfo = metainfo
             self.__bencode_data = data

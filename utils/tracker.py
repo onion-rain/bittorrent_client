@@ -63,7 +63,13 @@ class TrackerResponse:
         # The BitTorrent specification specifies two types of responses. One
         # where the peers field is a list of dictionaries and one where all
         # the peers are encoded in a single string
-        peers = self.response[b'peers']
+        if b'peers' in self.response.keys():
+            peers = self.response[b'peers']
+        elif b'peers6' in self.response.keys():
+            peers = self.response[b'peers6']
+        else:
+            raise
+
         if type(peers) == list:
             # TODO Implement support for dictionary peer list
             logging.debug('Dictionary model peers are returned by tracker')
@@ -111,17 +117,6 @@ class Tracker:
         :param uploaded: The total number of bytes uploaded
         :param downloaded: The total number of bytes downloaded
         """
-        # params = {
-        #     'info_hash': self.torrent.info_hash,
-        #     'peer_id': self.peer_id,
-        #     'port': 6881,
-        #     'uploaded': uploaded,
-        #     'downloaded': downloaded,
-        #     'left': self.torrent.total_size - downloaded,
-        #     'compact': 1,
-        #     # 'no_peer_id': '0',
-        #     # 'event': 'started'
-        # }
         params = {
             # 'info_hash': b'\x12\x34\x56\x78\x9a\xbc\xde\xf1\x23\x45\x67\x89\xab\xcd\xef\x12\x34\x56\x78\x9a',
             'info_hash': self.torrent.info_hash,
@@ -132,11 +127,19 @@ class Tracker:
             'left': 0,
             'compact': 1
         }
-        if first:
+        if not first:
             params['event'] = 'started'
 
         # url = self.torrent.announce + '?' + urlencode(params)
         url = 'http://tracker.opentrackr.org:1337/announce' + '?' + urlencode(params)
+        # url = 'udp://tracker.opentrackr.org:1337/announce' + '?' + urlencode(params)
+        # url = 'http://tracker1.itzmx.com:8080/announce' + '?' + urlencode(params)
+        # url = 'http://vps02.net.orel.ru:80/announce' + '?' + urlencode(params)
+        # url = 'http://tracker.zerobytes.xyz:1337/announce' + '?' + urlencode(params)
+        # url = 'https://w.wwwww.wtf:443/announce' + '?' + urlencode(params)
+        # url = 'https://trakx.herokuapp.com:443/announce' + '?' + urlencode(params)
+        # url = 'https://tracker.lelux.fi:443/announce' + '?' + urlencode(params)
+
         logging.info('Connecting to tracker at: ' + url)
 
         async with self.http_client.get(url) as response:
