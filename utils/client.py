@@ -91,18 +91,18 @@ class TorrentClient:
         for peer in new_peers:
             self.available_peers.put_nowait(peer)
 
-    def _on_block_retrieved(self, peer_id, piece_index, block_offset, data):
+    def _on_block_retrieved(self, remote_id, piece_index, block_offset, data):
         """
         Callback function called by the `PeerConnection` when a block is
         retrieved from a peer.
 
-        :param peer_id: The id of the peer the block was retrieved from
+        :param remote_id: The id of the peer the block was retrieved from
         :param piece_index: The piece index this block is a part of
         :param block_offset: The block offset within its piece
         :param data: The binary data retrieved
         """
         self.piece_manager.block_received(
-            peer_id=peer_id, piece_index=piece_index,
+            remote_id=remote_id, piece_index=piece_index,
             block_offset=block_offset, data=data)
 
     def stop(self):

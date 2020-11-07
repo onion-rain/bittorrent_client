@@ -1,5 +1,6 @@
 import struct
 import logging
+import bitstring
 
 # The default request size for blocks of pieces is 2^14 bytes.
 #
@@ -115,7 +116,7 @@ class Handshake(PeerMessage):
         Decodes the given BitTorrent message into a handshake message, if not
         a valid message, None is returned.
         """
-        logging.debug('Decoding Handshake of length: {length}'.format(length=len(data)))
+        # logging.debug('Decoding Handshake of length: {length}'.format(length=len(data)))
         if len(data) < (49 + 19):
             return None
         parts = struct.unpack('>B19s8x20s20s', data)
@@ -161,8 +162,7 @@ class BitField(PeerMessage):
     @classmethod
     def decode(cls, data: bytes):
         message_length = struct.unpack('>I', data[:4])[0]
-        logging.debug('Decoding BitField of length: {length}'.format(
-            length=message_length))
+        # logging.debug('Decoding BitField of length: {length}'.format(length=message_length))
 
         parts = struct.unpack('>Ib' + str(message_length - 1) + 's', data)
         return cls(parts[2])
@@ -247,8 +247,7 @@ class Have(PeerMessage):
 
     @classmethod
     def decode(cls, data: bytes):
-        logging.debug('Decoding Have of length: {length}'.format(
-            length=len(data)))
+        # logging.debug('Decoding Have of length: {length}'.format(length=len(data)))
         index = struct.unpack('>IbI', data)[2]
         return cls(index)
 
@@ -289,8 +288,7 @@ class Request(PeerMessage):
 
     @classmethod
     def decode(cls, data: bytes):
-        logging.debug('Decoding Request of length: {length}'.format(
-            length=len(data)))
+        # logging.debug('Decoding Request of length: {length}'.format(length=len(data)))
         # Tuple with (message length, id, index, begin, length)
         parts = struct.unpack('>IbIII', data)
         return cls(parts[2], parts[3], parts[4])
@@ -337,8 +335,7 @@ class Piece(PeerMessage):
 
     @classmethod
     def decode(cls, data: bytes):
-        logging.debug('Decoding Piece of length: {length}'.format(
-            length=len(data)))
+        # logging.debug('Decoding Piece of length: {length}'.format(length=len(data)))
         length = struct.unpack('>I', data[:4])[0]
         parts = struct.unpack('>IbII' + str(length - Piece.length) + 's',
                               data[:length+4])
@@ -371,8 +368,7 @@ class Cancel(PeerMessage):
 
     @classmethod
     def decode(cls, data: bytes):
-        logging.debug('Decoding Cancel of length: {length}'.format(
-            length=len(data)))
+        # logging.debug('Decoding Cancel of length: {length}'.format(length=len(data)))
         # Tuple with (message length, id, index, begin, length)
         parts = struct.unpack('>IbIII', data)
         return cls(parts[2], parts[3], parts[4])

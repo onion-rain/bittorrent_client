@@ -130,8 +130,8 @@ class Tracker:
         if not first:
             params['event'] = 'started'
 
-        # url = self.torrent.announce + '?' + urlencode(params)
-        url = 'http://tracker.opentrackr.org:1337/announce' + '?' + urlencode(params)
+        url = self.torrent.announce + '?' + urlencode(params)
+        # url = 'http://tracker.opentrackr.org:1337/announce' + '?' + urlencode(params)
         # url = 'udp://tracker.opentrackr.org:1337/announce' + '?' + urlencode(params)
         # url = 'http://tracker1.itzmx.com:8080/announce' + '?' + urlencode(params)
         # url = 'http://vps02.net.orel.ru:80/announce' + '?' + urlencode(params)

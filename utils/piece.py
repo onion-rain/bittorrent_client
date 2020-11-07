@@ -1,4 +1,5 @@
 from collections import namedtuple
+from hashlib import sha1
 
 class Block:
     """

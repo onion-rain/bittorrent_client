@@ -1,8 +1,16 @@
 import math
 import os
+import time
+import logging
+
+from collections import namedtuple, defaultdict
 
 from .piece import Piece, Block
 from .peer_message import REQUEST_SIZE
+
+
+# The type used for keeping track of pending request that can be re-issued
+PendingRequest = namedtuple('PendingRequest', ['block', 'added'])
 
 
 class PieceManager:
@@ -103,6 +111,8 @@ class PieceManager:
         """
         if peer_id in self.peers:
             self.peers[peer_id][index] = 1
+        # else:
+        #     self.peers[peer_id][index] = 1
 
     def remove_peer(self, peer_id):
         """
@@ -140,62 +150,61 @@ class PieceManager:
                 block = self._get_rarest_piece(peer_id).next_request()
         return block
 
-    # def _expired_requests(self, peer_id) -> Block:
-    #     """
-    #     Go through previously requested blocks, if any one have been in the
-    #     requested state for longer than `MAX_PENDING_TIME` return the block to
-    #     be re-requested.
+    def _expired_requests(self, peer_id) -> Block:
+        """
+        Go through previously requested blocks, if any one have been in the
+        requested state for longer than `MAX_PENDING_TIME` return the block to
+        be re-requested.
 
-    #     If no pending blocks exist, None is returned
-    #     """
-    #     current = int(round(time.time() * 1000))
-    #     for request in self.pending_blocks:
-    #         if self.peers[peer_id][request.block.piece]:
-    #             if request.added + self.max_pending_time < current:
-    #                 logging.info('Re-requesting block {block} for '
-    #                              'piece {piece}'.format(
-    #                                 block=request.block.offset,
-    #                                 piece=request.block.piece))
-    #                 # Reset expiration timer
-    #                 request.added = current
-    #                 return request.block
-    #     return None
+        If no pending blocks exist, None is returned
+        """
+        current = int(round(time.time() * 1000))
+        for request in self.pending_blocks:
+            if self.peers[peer_id][request.block.piece]:
+                if request.added + self.max_pending_time < current:
+                    logging.info('Re-requesting block {block} for '
+                                 'piece {piece}'.format(
+                                    block=request.block.offset,
+                                    piece=request.block.piece))
+                    # Reset expiration timer
+                    request.added = current
+                    return request.block
+        return None
 
-    # def _next_ongoing(self, peer_id) -> Block:
-    #     """
-    #     Go through the ongoing pieces and return the next block to be
-    #     requested or None if no block is left to be requested.
-    #     """
-    #     for piece in self.ongoing_pieces:
-    #         if self.peers[peer_id][piece.index]:
-    #             # Is there any blocks left to request in this piece?
-    #             block = piece.next_request()
-    #             if block:
-    #                 self.pending_blocks.append(
-    #                     PendingRequest(block, int(round(time.time() * 1000))))
-    #                 return block
-    #     return None
+    def _next_ongoing(self, peer_id) -> Block:
+        """
+        Go through the ongoing pieces and return the next block to be
+        requested or None if no block is left to be requested.
+        """
+        for piece in self.ongoing_pieces:
+            if self.peers[peer_id][piece.index]:
+                # Is there any blocks left to request in this piece?
+                block = piece.next_request()
+                if block:
+                    self.pending_blocks.append(PendingRequest(block, int(round(time.time() * 1000))))
+                    return block
+        return None
 
-    # def _get_rarest_piece(self, peer_id):
-    #     """
-    #     Given the current list of missing pieces, get the
-    #     rarest one first (i.e. a piece which fewest of its
-    #     neighboring peers have)
-    #     """
-    #     piece_count = defaultdict(int)
-    #     for piece in self.missing_pieces:
-    #         if not self.peers[peer_id][piece.index]:
-    #             continue
-    #         for p in self.peers:
-    #             if self.peers[p][piece.index]:
-    #                 piece_count[piece] += 1
+    def _get_rarest_piece(self, peer_id):
+        """
+        Given the current list of missing pieces, get the
+        rarest one first (i.e. a piece which fewest of its
+        neighboring peers have)
+        """
+        piece_count = defaultdict(int)
+        for piece in self.missing_pieces:
+            if not self.peers[peer_id][piece.index]:
+                continue
+            for p in self.peers:
+                if self.peers[p][piece.index]:
+                    piece_count[piece] += 1
 
-    #     rarest_piece = min(piece_count, key=lambda p: piece_count[p])
-    #     self.missing_pieces.remove(rarest_piece)
-    #     self.ongoing_pieces.append(rarest_piece)
-    #     return rarest_piece
+        rarest_piece = min(piece_count, key=lambda p: piece_count[p])
+        self.missing_pieces.remove(rarest_piece)
+        self.ongoing_pieces.append(rarest_piece)
+        return rarest_piece
 
-    def block_received(self, peer_id, piece_index, block_offset, data):
+    def block_received(self, remote_id, piece_index, block_offset, data):
         """
         This method must be called when a block has successfully been retrieved
         by a peer.
@@ -205,10 +214,10 @@ class PieceManager:
         be fetched again. If the hash succeeds the partial piece is written to
         disk and the piece is indicated as Have.
         """
-        logging.debug('Received block {block_offset} for piece {piece_index} '
-                      'from peer {peer_id}: '.format(block_offset=block_offset,
+        logging.info('Received block {block_offset} for piece {piece_index} '
+                      'from peer {remote_id}: '.format(block_offset=block_offset,
                                                      piece_index=piece_index,
-                                                     peer_id=peer_id))
+                                                     remote_id=remote_id))
 
         # Remove from pending requests
         for index, request in enumerate(self.pending_blocks):
@@ -229,11 +238,10 @@ class PieceManager:
                     complete = (self.total_pieces_len -
                                 len(self.missing_pieces) -
                                 len(self.ongoing_pieces))
-                    logging.info(
-                        '{complete} / {total} pieces downloaded {per:.3f} %'
-                        .format(complete=complete,
-                                total=self.total_pieces_len,
-                                per=(complete/self.total_pieces_len)*100))
+                    print(' ==== >>> ==== >>> {complete} / {total} pieces downloaded {per:.3f} % <<< ==== <<< ===='
+                          .format(complete=complete,
+                                  total=self.total_pieces_len,
+                                  per=(complete/self.total_pieces_len)*100))
                 else:
                     logging.info('Discarding corrupt piece {index}'
                                  .format(index=piece.index))

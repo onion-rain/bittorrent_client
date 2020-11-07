@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from concurrent.futures import CancelledError
+
 from .peer_message import PeerMessage, Handshake, Interested, BitField, NotInterested, Choke, Unchoke, Have, KeepAlive, Piece, Request, Cancel
 from .peer_stream_iterator import PeerStreamIterator
 
@@ -91,33 +93,43 @@ class PeerConnection:
                     if 'stopped' in self.my_state:
                         break
                     if type(message) is BitField:
+                        logging.info("receive BitField from peer {peer}".format(peer=self.remote_id))
                         self.piece_manager.add_peer(self.remote_id, message.bitfield)
                     elif type(message) is Interested:
+                        logging.info("receive Interested from peer {peer}".format(peer=self.remote_id))
                         self.peer_state.append('interested')
                     elif type(message) is NotInterested:
+                        logging.info("receive NotInterested from peer {peer}".format(peer=self.remote_id))
                         if 'interested' in self.peer_state:
                             self.peer_state.remove('interested')
                     elif type(message) is Choke:
+                        logging.info("receive Choke from peer {peer}".format(peer=self.remote_id))
                         self.my_state.append('choked')
                     elif type(message) is Unchoke:
+                        logging.info("receive Unchoke from peer {peer}".format(peer=self.remote_id))
                         if 'choked' in self.my_state:
                             self.my_state.remove('choked')
                     elif type(message) is Have:
+                        logging.info("receive Have from peer {peer}".format(peer=self.remote_id))
                         self.piece_manager.update_peer(self.remote_id, message.index)
                     elif type(message) is KeepAlive:
+                        logging.info("receive KeepAlive from peer {peer}".format(peer=self.remote_id))
                         pass
                     elif type(message) is Piece:
+                        logging.info("receive Piece from peer {peer}".format(peer=self.remote_id))
                         self.my_state.remove('pending_request')
                         self.on_block_cb(
-                            peer_id=self.remote_id,
+                            remote_id=self.remote_id,
                             piece_index=message.index,
                             block_offset=message.begin,
                             data=message.block
                         )
                     elif type(message) is Request:
+                        logging.info("receive Request from peer {peer}".format(peer=self.remote_id))
                         # TODO Add support for sending data
                         logging.info('Ignoring the received Request message.')
                     elif type(message) is Cancel:
+                        logging.info("receive Cancel from peer {peer}".format(peer=self.remote_id))
                         # TODO Add support for sending data
                         logging.info('Ignoring the received Cancel message.')
 
@@ -129,14 +141,11 @@ class PeerConnection:
                                 await self._request_piece()
 
             except ProtocolError as e:
-                logging.exception('Protocol error')
-                # continue
+                logging.warning('Connection to peer with: {ip}:{port} Protocol error'.format(ip=ip, port=port))
             except (ConnectionRefusedError):
                 logging.warning('Connection to peer with: {ip}:{port} refused'.format(ip=ip, port=port))
-                # continue
             except (TimeoutError):
                 logging.warning('Connection to peer with: {ip}:{port} timeout'.format(ip=ip, port=port))
-                # continue
             except (ConnectionResetError, CancelledError):
                 logging.warning('Connection to peer with: {ip}:{port} closed'.format(ip=ip, port=port))
             except Exception as e:
@@ -185,14 +194,14 @@ class PeerConnection:
 
         response = Handshake.decode(buf[:Handshake.length])
         if not response:
-            raise ProtocolError('Unable receive and parse a handshake : {ip}:{port}'.format(self.ip, self.port))
+            raise ProtocolError('Unable receive and parse a handshake : {ip}:{port}'.format(ip=self.ip, port=self.port))
         if not response.info_hash == self.info_hash:
-            raise ProtocolError('Handshake with invalid info_hash : {ip}:{port}'.format(self.ip, self.port))
+            raise ProtocolError('Handshake with invalid info_hash : {ip}:{port}'.format(ip=self.ip, port=self.port))
 
         # TODO: According to spec we should validate that the peer_id received
         # from the peer match the peer_id received from the tracker.
         self.remote_id = response.peer_id
-        logging.info('Handshake with peer {id} was successful, {ip}:{port}'.format(id=self.remote_id, ip=self.ip, port=self.port))
+        logging.info('Handshake with peer {peer} was successful, {ip}:{port}'.format(peer=self.remote_id, ip=self.ip, port=self.port))
 
         # We need to return the remaining buffer data, since we might have
         # read more bytes then the size of the handshake message and we need
@@ -201,7 +210,7 @@ class PeerConnection:
 
     async def _send_interested(self):
         message = Interested()
-        logging.debug('Sending message: {type}'.format(type=message))
+        logging.info('Sending message: {type} to peer {peer}'.format(type=message, peer=self.remote_id))
         self.writer.write(message.encode())
         await self.writer.drain()
 
@@ -210,7 +219,7 @@ class PeerConnection:
         if block:
             message = Request(block.piece, block.offset, block.length).encode()
 
-            logging.debug('Requesting block {block} for piece {piece} '
+            logging.info('Requesting block {block} for piece {piece} '
                           'of {length} bytes from peer {peer}'.format(
                             piece=block.piece,
                             block=block.offset,

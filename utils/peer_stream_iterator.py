@@ -1,3 +1,9 @@
+import struct
+import logging
+
+from concurrent.futures import CancelledError
+
+from .peer_message import PeerMessage, Handshake, Interested, BitField, NotInterested, Choke, Unchoke, Have, KeepAlive, Piece, Request, Cancel
 
 class PeerStreamIterator:
     """
@@ -14,7 +20,7 @@ class PeerStreamIterator:
         self.reader = reader
         self.buffer = initial if initial else b''
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
     async def __anext__(self):
