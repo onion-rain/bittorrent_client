@@ -35,7 +35,7 @@ class PeerStreamIterator:
                     if message:
                         return message
                 else:
-                    logging.debug('No data read from stream')
+                    # logging.debug('No data read from stream')
                     if self.buffer:
                         message = self.parse()
                         if message:
@@ -123,7 +123,7 @@ class PeerStreamIterator:
                     return Cancel.decode(data)
                 else:
                     logging.info('Unsupported message!')
-            else:
-                logging.debug('Not enough in buffer in order to parse')
+            # else:
+            #     logging.debug('Not enough in buffer in order to parse')
         return None
 

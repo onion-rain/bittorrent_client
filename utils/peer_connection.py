@@ -93,30 +93,30 @@ class PeerConnection:
                     if 'stopped' in self.my_state:
                         break
                     if type(message) is BitField:
-                        logging.info("receive BitField from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive BitField from peer {peer}".format(peer=self.remote_id))
                         self.piece_manager.add_peer(self.remote_id, message.bitfield)
                     elif type(message) is Interested:
-                        logging.info("receive Interested from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive Interested from peer {peer}".format(peer=self.remote_id))
                         self.peer_state.append('interested')
                     elif type(message) is NotInterested:
-                        logging.info("receive NotInterested from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive NotInterested from peer {peer}".format(peer=self.remote_id))
                         if 'interested' in self.peer_state:
                             self.peer_state.remove('interested')
                     elif type(message) is Choke:
-                        logging.info("receive Choke from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive Choke from peer {peer}".format(peer=self.remote_id))
                         self.my_state.append('choked')
                     elif type(message) is Unchoke:
-                        logging.info("receive Unchoke from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive Unchoke from peer {peer}".format(peer=self.remote_id))
                         if 'choked' in self.my_state:
                             self.my_state.remove('choked')
                     elif type(message) is Have:
-                        logging.info("receive Have from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive Have from peer {peer}".format(peer=self.remote_id))
                         self.piece_manager.update_peer(self.remote_id, message.index)
                     elif type(message) is KeepAlive:
-                        logging.info("receive KeepAlive from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive KeepAlive from peer {peer}".format(peer=self.remote_id))
                         pass
                     elif type(message) is Piece:
-                        logging.info("receive Piece from peer {peer}".format(peer=self.remote_id))
+                        # logging.info("receive Piece from peer {peer}".format(peer=self.remote_id))
                         self.my_state.remove('pending_request')
                         self.on_block_cb(
                             remote_id=self.remote_id,
@@ -141,7 +141,8 @@ class PeerConnection:
                                 await self._request_piece()
 
             except ProtocolError as e:
-                logging.warning('Connection to peer with: {ip}:{port} Protocol error'.format(ip=ip, port=port))
+                logging.exception('Connection to peer with: {ip}:{port} Protocol error'.format(ip=ip, port=port))
+                # logging.warning('Connection to peer with: {ip}:{port} Protocol error'.format(ip=ip, port=port))
             except (ConnectionRefusedError):
                 logging.warning('Connection to peer with: {ip}:{port} refused'.format(ip=ip, port=port))
             except (TimeoutError):
