@@ -48,7 +48,7 @@ class PeerConnection:
                             received from the remote peer
         """
         self.my_state = []
-        self.peer_state = []
+        # self.peer_state = []
         self.available_peers = available_peers
         self.info_hash = info_hash
         self.peer_id = peer_id
@@ -61,6 +61,7 @@ class PeerConnection:
 
     async def _start(self):
         while 'stopped' not in self.my_state:
+            # print("<<<<<<<<<<<<<<<<<<<<<<<========================PEER CONNECTION=========================>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
             ip, port = await self.available_peers.get()
             self.ip = ip
             self.port = port
@@ -90,18 +91,19 @@ class PeerConnection:
                 # Start reading responses as a stream of messages for as
                 # long as the connection is open and data is transmitted
                 async for message in PeerStreamIterator(self.reader, buffer):
+                    # print("i am alive {peer}".format(peer=self.remote_id))
                     if 'stopped' in self.my_state:
                         break
                     if type(message) is BitField:
                         # logging.info("receive BitField from peer {peer}".format(peer=self.remote_id))
                         self.piece_manager.add_peer(self.remote_id, message.bitfield)
-                    elif type(message) is Interested:
-                        # logging.info("receive Interested from peer {peer}".format(peer=self.remote_id))
-                        self.peer_state.append('interested')
-                    elif type(message) is NotInterested:
-                        # logging.info("receive NotInterested from peer {peer}".format(peer=self.remote_id))
-                        if 'interested' in self.peer_state:
-                            self.peer_state.remove('interested')
+                    # elif type(message) is Interested:
+                    #     # logging.info("receive Interested from peer {peer}".format(peer=self.remote_id))
+                    #     self.peer_state.append('interested')
+                    # elif type(message) is NotInterested:
+                    #     # logging.info("receive NotInterested from peer {peer}".format(peer=self.remote_id))
+                    #     if 'interested' in self.peer_state:
+                    #         self.peer_state.remove('interested')
                     elif type(message) is Choke:
                         # logging.info("receive Choke from peer {peer}".format(peer=self.remote_id))
                         self.my_state.append('choked')
@@ -114,6 +116,7 @@ class PeerConnection:
                         self.piece_manager.update_peer(self.remote_id, message.index)
                     elif type(message) is KeepAlive:
                         # logging.info("receive KeepAlive from peer {peer}".format(peer=self.remote_id))
+                        await asyncio.sleep(1)
                         pass
                     elif type(message) is Piece:
                         # logging.info("receive Piece from peer {peer}".format(peer=self.remote_id))
@@ -171,13 +174,13 @@ class PeerConnection:
         """
         Sends the cancel message to the remote peer and closes the connection.
         """
-        logging.info('Closing peer {id}, {ip}:{port}'.format(id=self.remote_id, ip=self.ip, port=self.port))
+        logging.warning('Closing peer {id}, {ip}:{port}'.format(id=self.remote_id, ip=self.ip, port=self.port))
         if not self.future.done():
             self.future.cancel()
         if self.writer:
             self.writer.close()
 
-        self.queue.task_done()
+        self.available_peers.task_done()
 
     async def _send_handshake(self):
         """

@@ -58,6 +58,7 @@ class TorrentClient:
         interval_time = 30*60
 
         while True:
+            # print("====================>>>>>>>>>>>>>>>>client<<<<<<<<<<<<<<<<<<<<==================")
             if self.piece_manager.complete:
                 logging.info('Torrent fully downloaded!')
                 break
@@ -79,10 +80,15 @@ class TorrentClient:
                     previous_moment = current_moment
                     interval_time = response.interval
                     self._update_queue(response.peers)
+                    print("available_peers: {}".format(len(response.peers)))
                     
             else:
+                if self.available_peers.empty():
+                    print("self.available_peers is enmpty !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+                    self._update_queue(response.peers)
                 await asyncio.sleep(5)
 
+        # print("====================>>>>>>>>>>>>>>>>!!!!!!!!!!!!!!!!!!!!!!!1start STOP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1<<<<<<<<<<<<<<<<<<<<==================")
         self.stop()
     
     def _update_queue(self, new_peers):

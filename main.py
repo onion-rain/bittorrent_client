@@ -15,9 +15,10 @@ from utils.client import TorrentClient
 #     print(response)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.NOTSET)
+    # logging.basicConfig(level=logging.NOTSET)
     # logging.basicConfig(level=logging.INFO)
-    # logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.WARNING)
+    # logging.basicConfig(level=logging.ERROR)
     # filename = "data/ubuntu-16.04-desktop-amd64.iso.torrent"
     # filename = "data/ubuntu-16.04.1-server-amd64.iso.torrent"
     # filename = "data/ubuntu-18.04.3-desktop-amd64.iso.torrent"

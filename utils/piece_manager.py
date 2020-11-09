@@ -10,7 +10,7 @@ from .peer_message import REQUEST_SIZE
 
 
 # The type used for keeping track of pending request that can be re-issued
-PendingRequest = namedtuple('PendingRequest', ['block', 'added'])
+PendingRequest = namedtuple('PendingRequest', ['block', 'added_moment'])
 
 
 class PieceManager:
@@ -31,7 +31,7 @@ class PieceManager:
         self.missing_pieces = self._initiate_pieces()
         self.ongoing_pieces = []
         self.have_pieces = []
-        self.max_pending_time = 300 * 1000  # 5 minutes
+        self.max_pending_time = 1 * 60 * 1000  # 5 minutes
         self.fd = os.open(torrent.output_file,  os.O_RDWR | os.O_CREAT)
 
     def _initiate_pieces(self) -> [Piece]:
@@ -147,7 +147,9 @@ class PieceManager:
         if not block:
             block = self._next_ongoing(peer_id)
             if not block:
-                block = self._get_rarest_piece(peer_id).next_request()
+                # block = self._get_rarest_piece(peer_id).next_request()
+                piece = self._get_rarest_piece(peer_id)
+                block = self._next_ongoing(peer_id)
         return block
 
     def _expired_requests(self, peer_id) -> Block:
@@ -161,14 +163,15 @@ class PieceManager:
         current = int(round(time.time() * 1000))
         for request in self.pending_blocks:
             if self.peers[peer_id][request.block.piece]:
-                if request.added + self.max_pending_time < current:
+                if request.added_moment + self.max_pending_time < current:
                     logging.info('Re-requesting block {block} for '
                                  'piece {piece}'.format(
                                     block=request.block.offset,
                                     piece=request.block.piece))
                     # Reset expiration timer
-                    request.added = current
-                    return request.block
+                    self.pending_blocks.append(PendingRequest(request.block, current))
+                    self.pending_blocks.remove(request)
+                    return self.pending_blocks[-1].block
         return None
 
     def _next_ongoing(self, peer_id) -> Block:
@@ -185,7 +188,7 @@ class PieceManager:
                     return block
         return None
 
-    def _get_rarest_piece(self, peer_id):
+    def _get_rarest_piece(self, peer_id) -> Piece:
         """
         Given the current list of missing pieces, get the
         rarest one first (i.e. a piece which fewest of its
