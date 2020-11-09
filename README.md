@@ -16,12 +16,12 @@
 
 ## bencoding编码
 
-![bencoding字典主键](readme\bencoding字典主键.jpg)
+![bencoding字典主键](readme/bencoding字典主键.jpg)
 
 单文件的torrent文件info字段
 
-![bencoding字典主键](readme\info_single_file.jpg)
+![bencoding字典主键](readme/info_single_file.jpg)
 
 多文件的torrent文件info字段中的Length变成files dict
 
-![bencoding字典主键](readme\multi_files_Length变成files.jpg)
+![bencoding字典主键](readme/multi_files_Length变成files.jpg)
