@@ -35,9 +35,13 @@
 
 打开.torrent文件，解析出文件meta_info、info_hash
 
+### TrackerResponse类
+
+包装一下tracker的response信息，便于使用
+
 ### Tracker类
 
-和tracker服务器沟通获取peers的ip和port
+根据.torrent文件中的和tracker服务器沟通获取peers的ip和port以及interval等信息
 
 ### PieceManager类
 
@@ -45,12 +49,22 @@
 
 并由此确定下一个block(文件分解为pieces，pieces分解为blocks)下载什么
 
+### PeerMessage类
+
+peer connection要用到固定message格式基类，
+
+其子类包括Handshake, Interested, BitField, NotInterested, Choke, Unchoke, Have, KeepAlive, Piece, Request, Cancel
+
 ### PeerConnection类
+
+先从available_peers中get一个peer
 
 根据PieceManager的决策向peer服务器请求指定pieces(blocks)
 
+如果这个peer连接出错就关闭连接再从从available_peers中get一个peer
+
 ### TorrentClient类
 
-通过创建Tracker实例获取available_peers，并不断刷新更新
+通过创建Tracker实例获取available_peers放到available_peers(asyncio.Queue)里，并根据tracker反馈的interval进行刷新
 
 根据available_peers创建多个PeerConnection实例多协程下载
