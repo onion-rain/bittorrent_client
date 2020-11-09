@@ -1,6 +1,4 @@
-# 分布式系统大作业
-
-（二）、Bittorrent客户端
+# 分布式系统大作业 - Bittorrent客户端
 
 目标：
 
@@ -14,6 +12,10 @@
 
 5、编写测试程序，进行测试验证
 
+## 参考
+
+[github](https://github.com/eliasson/pieces), [blog](https://markuseliasson.se/article/bittorrent-in-python/)
+
 ## bencoding编码
 
 ![bencoding字典主键](readme/bencoding字典主键.jpg)
@@ -25,3 +27,30 @@
 多文件的torrent文件info字段中的Length变成files dict
 
 ![bencoding字典主键](readme/multi_files_Length变成files.jpg)
+
+
+## 程序结构
+
+### Torrent类
+
+打开.torrent文件，解析出文件meta_info、info_hash
+
+### Tracker类
+
+和tracker服务器沟通获取peers的ip和port
+
+### PieceManager类
+
+主要存储missing_pieces、ongoing_pieces、pending_blocks、have_pieces
+
+并由此确定下一个block(文件分解为pieces，pieces分解为blocks)下载什么
+
+### PeerConnection类
+
+根据PieceManager的决策向peer服务器请求指定pieces(blocks)
+
+### TorrentClient类
+
+通过创建Tracker实例获取available_peers，并不断刷新更新
+
+根据available_peers创建多个PeerConnection实例多协程下载
