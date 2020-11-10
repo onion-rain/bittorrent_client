@@ -1,5 +1,6 @@
 import asyncio
 import time
+import logging
 
 from .peer_connection import PeerConnection
 from .piece_manager import PieceManager
@@ -69,19 +70,21 @@ class TorrentClient:
             current_moment = time.time()
 
             if (previous_moment is None) or (current_moment > previous_moment + interval_time):
+                
+                try:
+                    response = await self.tracker.connect(
+                        first=False if previous_moment else True,
+                        uploaded=self.piece_manager.bytes_uploaded,
+                        downloaded=self.piece_manager.bytes_downloaded)
 
-                response = await self.tracker.connect(
-                    first=False if previous_moment else True,
-                    uploaded=self.piece_manager.bytes_uploaded,
-                    downloaded=self.piece_manager.bytes_downloaded)
-
-                if response:
-                    # print(response)
-                    previous_moment = current_moment
-                    interval_time = response.interval
-                    self._update_queue(response.peers)
-                    print("available_peers: {}".format(len(response.peers)))
-                    
+                    if response:
+                        # print(response)
+                        previous_moment = current_moment
+                        # interval_time = response.interval
+                        self._update_queue(response.peers)
+                        print("available_peers: {}".format(len(response.peers)))
+                except BaseException:
+                    logging.exception('Connect to tracker failed')
             else:
                 if self.available_peers.empty():
                     print("self.available_peers is enmpty !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
