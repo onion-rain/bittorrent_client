@@ -87,7 +87,7 @@ class TorrentClient:
                     logging.exception('Connect to tracker failed')
             else:
                 if self.available_peers.empty():
-                    print("self.available_peers is enmpty !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+                    print("TorrentClient.available_peers is enmpty !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     self._update_queue(response.peers)
                 await asyncio.sleep(5)
 

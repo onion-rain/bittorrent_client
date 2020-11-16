@@ -68,12 +68,12 @@ class PieceManager:
             pieces.append(Piece(index, blocks, hash_value))
         return pieces
 
-    # def close(self):
-    #     """
-    #     Close any resources used by the PieceManager (such as open files)
-    #     """
-    #     if self.fd:
-    #         os.close(self.fd)
+    def close(self):
+        """
+        Close any resources used by the PieceManager (such as open files)
+        """
+        if self.fd:
+            os.close(self.fd)
 
     @property
     def complete(self):
@@ -238,13 +238,16 @@ class PieceManager:
                     self._write(piece)
                     self.ongoing_pieces.remove(piece)
                     self.have_pieces.append(piece)
-                    complete = (self.total_pieces_len -
-                                len(self.missing_pieces) -
-                                len(self.ongoing_pieces))
+                    complete = len(self.have_pieces)
+                    # complete = (self.total_pieces_len -
+                    #             len(self.missing_pieces) -
+                    #             len(self.ongoing_pieces))
                     print(' ==== >>> ==== >>> {complete} / {total} pieces downloaded {per:.3f} % <<< ==== <<< ===='
                           .format(complete=complete,
                                   total=self.total_pieces_len,
                                   per=(complete/self.total_pieces_len)*100))
+                    if (self.total_pieces_len == complete):
+                        print(complete)
                 else:
                     logging.info('Discarding corrupt piece {index}'
                                  .format(index=piece.index))

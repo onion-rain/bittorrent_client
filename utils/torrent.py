@@ -49,18 +49,29 @@ class Torrent:
         """
         if self.multi_file:
             # TODO Add support for multi-file torrents
-            raise RuntimeError('Multi-file torrents is not supported!')
-        self.files.append(
-            TorrentFile(
-                name=self.meta_info[b'info'][b'name'].decode('utf-8'),
-                length=self.meta_info[b'info'][b'length']))
+            # raise RuntimeError('Multi-file torrents is not supported!')
+            root = self.meta_info[b'info'][b'name'].decode('utf-8')
+            for f in self.meta_info[b'info'][b'files']:
+                self.files.append(
+                    TorrentFile(
+                        name=root+f[b'path'][0].decode('utf-8'),
+                        length=f[b'length']))
+        else:
+            self.files.append(
+                TorrentFile(
+                    name=self.meta_info[b'info'][b'name'].decode('utf-8'),
+                    length=self.meta_info[b'info'][b'length']))
 
     @property
     def announce(self) -> str:
         """
         The announce URL to the tracker.
         """
-        return self.meta_info[b'announce'].decode('utf-8')
+        if b'announce' in self.meta_info:
+            return self.meta_info[b'announce'].decode('utf-8')
+        if b'announce-list' in self.meta_info:
+            return self.meta_info[b'announce-list'][0][0].decode('utf-8')
+        
 
     @property
     def multi_file(self) -> bool:
@@ -86,8 +97,11 @@ class Torrent:
 
         :return: The total size (in bytes) for this torrent's data.
         """
-        if self.multi_file:
-            raise RuntimeError('Multi-file torrents is not supported!')
+        size = 0
+        for f in self.files:
+            size += f.length
+        # if self.multi_file:
+        #     raise RuntimeError('Multi-file torrents is not supported!')
         return self.files[0].length
 
     @property
