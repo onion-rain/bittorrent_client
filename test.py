@@ -8,5 +8,7 @@ b5 = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\r\x0e\x0f\x10\x11\x1
 b6 = b'\x09'
 b7 = b'\x0a'
 
-fd = os.open("test",  os.O_RDWR | os.O_CREAT | os.O_BINARY)
-os.write(fd, b7)
+# fd = os.open("test",  os.O_RDWR | os.O_CREAT | os.O_BINARY)
+# os.write(fd, b7)
+f = open("test", 'wb')
+f.write(b7)

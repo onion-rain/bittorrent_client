@@ -32,7 +32,7 @@ class PieceManager:
         self.ongoing_pieces = []
         self.have_pieces = []
         self.max_pending_time = 1 * 60 * 1000  # 5 minutes
-        self.fd = os.open(torrent.output_file,  os.O_RDWR | os.O_CREAT | os.O_BINARY)
+        self.f = open(torrent.output_file, "wb")
 
     def _initiate_pieces(self) -> [Piece]:
         """
@@ -72,8 +72,10 @@ class PieceManager:
         """
         Close any resources used by the PieceManager (such as open files)
         """
-        if self.fd:
-            os.close(self.fd)
+        # if self.fd:
+        #     os.close(self.fd)
+        if self.f:
+            self.f.close()
 
     @property
     def complete(self):
@@ -279,5 +281,5 @@ class PieceManager:
         Write the given piece to disk
         """
         pos = piece.index * self.torrent.piece_length
-        os.lseek(self.fd, pos, os.SEEK_SET)
-        os.write(self.fd, piece.data)
+        self.f.seek(pos, 0)
+        self.f.write(piece.data)
