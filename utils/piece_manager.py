@@ -32,7 +32,7 @@ class PieceManager:
         self.ongoing_pieces = []
         self.have_pieces = []
         self.max_pending_time = 1 * 60 * 1000  # 5 minutes
-        self.fd = os.open(torrent.output_file,  os.O_RDWR | os.O_CREAT)
+        self.fd = os.open(torrent.output_file,  os.O_RDWR | os.O_CREAT | os.O_BINARY)
 
     def _initiate_pieces(self) -> [Piece]:
         """
