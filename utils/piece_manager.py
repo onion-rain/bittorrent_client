@@ -249,7 +249,7 @@ class PieceManager:
                                   total=self.total_pieces_len,
                                   per=(complete/self.total_pieces_len)*100))
                     if (self.total_pieces_len == complete):
-                        print(complete)
+                        print("complete")
                 else:
                     logging.info('Discarding corrupt piece {index}'
                                  .format(index=piece.index))
